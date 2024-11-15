@@ -70,7 +70,7 @@ function TaskList() {
                 case 'portfolio':
                     return { ...task, portfolio: true }; // Mark as portfolio
                 case 'archive':
-                    return { ...task, done: true, doneDate: new Date().toISOString() }; // Mark as done (archived)
+                    return { ...task, archive: true }; // Mark as done (archived)
                 case 'delete':
                     return { id: taskId }; // Only the id for deletion
                 default:
@@ -148,13 +148,14 @@ function TaskList() {
             <Row>
                 {filteredTasks.map(task => (
                     <Col sm={4} key={task.id} className="mb-3">
-                        <Card>
+                        <Card onClick={() => { setShowTaskDialog(true); setCurrentTask(task); }}>
                             <Card.Body>
                                 {/* Select checkbox for task */}
                                 {selectMode && (
                                     <Form.Check
                                         type="checkbox"
                                         checked={selectedTasks.includes(task.id)}
+                                        onClick={e => { e.stopPropagation(); }}
                                         onChange={() => toggleSelectTask(task.id)}
                                         className="position-absolute top-0 start-0 m-2"
                                     />
@@ -180,13 +181,10 @@ function TaskList() {
                                         type="checkbox"
                                         label="Completed"
                                         checked={task.done}
+                                        onClick={e => { e.stopPropagation(); }}
                                         onChange={(event) => toggleTaskCompletion(task, event.target.checked)}
                                     />
                                 </div>
-
-                                <Button variant="link" onClick={() => { setShowTaskDialog(true); setCurrentTask(task); }}>
-                                    Edit
-                                </Button>
                             </Card.Body>
                         </Card>
                     </Col>
