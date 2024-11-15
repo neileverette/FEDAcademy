@@ -13,7 +13,6 @@ function TaskList() {
     // Add the notification state
     const [notification, setNotification] = useState({ message: '', type: '', show: false });
 
-
     const refreshTasks = () =>
         axios.get('http://localhost:8080/api/tasks')
             .then(response => setTasks(response.data.filter(task => !task.archive)))
@@ -130,20 +129,20 @@ function TaskList() {
 
             <InputGroup className="mb-4">
                 <FormControl placeholder="Search tasks..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-                <Button variant="outline-secondary" onClick={() => setShowTaskDialog(true)}>Create Task</Button>
-                <Button variant="outline-secondary" onClick={() => setSelectMode(true)} disabled={selectMode}>
+                <Button variant="primary" onClick={() => setShowTaskDialog(true)}>Create Task</Button>
+
+                {selectMode && selectedTasks.length > 0 && (
+                    <>
+                        <Button variant="success" onClick={() => updateSelectedTasks('portfolio')}>Use in Portfolio</Button>
+                        <Button variant="warning" onClick={() => updateSelectedTasks('archive')}>Archive</Button>
+                        <Button variant="danger" onClick={() => updateSelectedTasks('delete')}>Delete</Button>
+                    </>
+                )}
+                
+                <Button variant="secondary" onClick={() => setSelectMode(!selectMode)}>
                     {selectMode ? 'Cancel' : 'Select'}
                 </Button>
             </InputGroup>
-
-            {selectMode && selectedTasks.length > 0 && (
-                <div className="mb-3">
-                    <Button variant="success" onClick={() => updateSelectedTasks('portfolio')}>Use in Portfolio</Button>
-                    <Button variant="warning" onClick={() => updateSelectedTasks('archive')}>Archive</Button>
-                    <Button variant="danger" onClick={() => updateSelectedTasks('delete')}>Delete</Button>
-                    <Button variant="secondary" onClick={() => setSelectMode(false)}>Cancel</Button>
-                </div>
-            )}
 
             <Row>
                 {filteredTasks.map(task => (
@@ -157,19 +156,19 @@ function TaskList() {
                                         checked={selectedTasks.includes(task.id)}
                                         onClick={e => { e.stopPropagation(); }}
                                         onChange={() => toggleSelectTask(task.id)}
-                                        className="position-absolute top-0 start-0 m-2"
+                                        className="position-absolute top-0 end-0 m-2"
                                     />
                                 )}
 
-                                {/* Portfolio Star */}
-                                {task.portfolio && (
-                                    <span className="position-absolute top-0 end-0 p-2" style={{ fontSize: '20px', color: 'gold' }}>
-                                        <i className="bi bi-star-fill"></i>
-                                    </span>
-                                )}
-
                                 {/* Task Title */}
-                                <Card.Title>{task.title}</Card.Title>
+                                <Card.Title>
+                                    {task.title}
+
+                                    {/* Portfolio Star */}
+                                    {task.portfolio && (
+                                        <div className="position-absolute bottom-0 end-0 m-2">★</div>
+                                    )}
+                                </Card.Title>
 
                                 {/* Task Description */}
                                 <Card.Text>{task.description}</Card.Text>

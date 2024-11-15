@@ -24,7 +24,7 @@ function Review() {
             {tasks.length > 0 ? (
                 tasks.map(task => (
                     <div key={task.id} className="mb-5">
-                        <div className="border p-4 mb-3 bg-light">
+                        <div className="border p-4 mb-3">
                             <h3>{task.title}</h3>
                             <p>{task.description}</p>
 

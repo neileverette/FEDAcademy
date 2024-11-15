@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Container } from 'react-bootstrap';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 
@@ -10,10 +10,20 @@ import Portfolio from './components/Portfolio/Portfolio';
 import Review from './components/Review/Review';
 
 function App() {
+  const [theme, setTheme] = useState('default');
+
+  useEffect(() => {
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)');
+    const activeTheme = theme == 'default'
+      ? isDark && 'dark' || 'light'
+      : theme
+    document.body.setAttribute('data-bs-theme', activeTheme);
+  }, [theme]);
+
   return (
     <Router>
       <Container>
-        <Header />
+        <Header theme={{current: theme, set: setTheme}} />
         <Navigation />
         <Routes>
           <Route path="/tasks" element={<TaskList />} />
