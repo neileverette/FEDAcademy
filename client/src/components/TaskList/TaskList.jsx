@@ -11,10 +11,13 @@ function TaskList() {
     const [showTaskDialog, setShowTaskDialog] = useState(false);
     const [currentTask, setCurrentTask] = useState(null);
 
-    useEffect(() => {
+    const refreshTasks = () => 
         axios.get('http://localhost:8080/api/tasks')
             .then(response => setTasks(response.data.filter(task => !task.archive)))
             .catch(error => alert('Failed to load tasks.'));
+
+    useEffect(() => {
+        refreshTasks();
     }, []);
 
     // Handle task selection/deselection
@@ -26,23 +29,26 @@ function TaskList() {
         );
     };
 
-    const toggleTaskCompletion = (task) => {
-        task.done = true;
+    const toggleTaskCompletion = (task, done) => {
+        task.done = done;
         task.doneDate = { type: 'date', value: (new Date()).toISOString() };
         axios.put(`http://localhost:8080/api/tasks/task`, task)
-            .then(response => alert('Task marked as completed!'))
-            .catch(error => alert('Failed to mark task as completed.'));
+            .then(response => alert(`Task marked as ${done ? '' : 'un'}completed!`))
+            .catch(error => alert('Failed to mark task as completed.'))
+            .finally(() => refreshTasks());
     };
 
     const handleTaskSubmit = (task) => {
         if (task.id) {
-            axios.put(`http://localhost:8080/api/tasks`, task)
+            axios.put(`http://localhost:8080/api/tasks/task`, task)
                 .then(response => alert('Task Updated Successfully!'))
-                .catch(error => alert('Failed to update task.'));
+                .catch(error => alert('Failed to update task.'))
+                .finally(() => refreshTasks());
         } else {
             axios.post('http://localhost:8080/api/tasks/new', task)
                 .then(response => alert('Task Created Successfully!'))
-                .catch(error => alert('Failed to create task.'));
+                .catch(error => alert('Failed to create task.'))
+                .finally(() => refreshTasks());
         }
         setShowTaskDialog(false);
         setCurrentTask(null);
@@ -79,7 +85,8 @@ function TaskList() {
                     setSelectedTasks([]);
                     setTasks(prevTasks => prevTasks.filter(task => !selectedTasks.includes(task.id)));
                 })
-                .catch(error => alert('Failed to delete tasks.'));
+                .catch(error => alert('Failed to delete tasks.'))
+                .finally(() => refreshTasks());
         } else {
             // For other actions (portfolio, archive), send an update request
             Promise.all(updateData.map(task =>
@@ -95,7 +102,8 @@ function TaskList() {
                             : task
                     ));
                 })
-                .catch(error => alert(`Failed to update tasks for action: ${action}`));
+                .catch(error => alert(`Failed to update tasks for action: ${action}`))
+                .finally(() => refreshTasks());
         }
     };
 
@@ -155,8 +163,7 @@ function TaskList() {
                                         type="checkbox"
                                         label="Completed"
                                         checked={task.done}
-                                        onChange={() => toggleTaskCompletion(task.id)}
-                                        disabled={task.done}  // Disables the checkbox if the task is already completed
+                                        onChange={(event) => toggleTaskCompletion(task, event.target.checked)}
                                     />
                                 </div>
 
@@ -201,6 +208,7 @@ function TaskList() {
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowTaskDialog(false)}>Cancel</Button>
                     <Button variant="primary" onClick={() => handleTaskSubmit({
+                        ...currentTask,
                         id: currentTask ? currentTask.id : null,
                         title: document.getElementById('taskTitle').value,
                         description: document.getElementById('taskDescription').value,
