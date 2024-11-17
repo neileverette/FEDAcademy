@@ -22,11 +22,12 @@ function Archive() {
     return (
         <div>
             <h2>Archive</h2>
-            <Row>
+            <p>Tasks no longer active.</p>
+            <Row className="app-tasks">
                 {tasks.length > 0 ? (
                     tasks.map(task => (
                         <Col sm={4} key={task.id} className="mb-3">
-                            <Card>
+                            <Card className="app-card">
                                 <Card.Body>
                                     <Card.Title>{task.title}</Card.Title>
                                     <Card.Text>{task.description}</Card.Text>

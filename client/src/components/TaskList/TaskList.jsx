@@ -127,27 +127,36 @@ function TaskList() {
                 )}
             </ToastContainer>
 
-            <InputGroup className="mb-4">
-                <FormControl placeholder="Search tasks..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-                <Button variant="primary" onClick={() => setShowTaskDialog(true)}>Create Task</Button>
+            <h2>Tasks</h2>
+            <p>Live tasks that you are still engaged with.</p>
 
-                {selectMode && selectedTasks.length > 0 && (
-                    <>
-                        <Button variant="success" onClick={() => updateSelectedTasks('portfolio')}>Use in Portfolio</Button>
-                        <Button variant="warning" onClick={() => updateSelectedTasks('archive')}>Archive</Button>
-                        <Button variant="danger" onClick={() => updateSelectedTasks('delete')}>Delete</Button>
-                    </>
-                )}
-                
-                <Button variant="secondary" onClick={() => setSelectMode(!selectMode)}>
-                    {selectMode ? 'Cancel' : 'Select'}
-                </Button>
-            </InputGroup>
+            <Row className="app-controls">
+                <Col className="col-auto">
+                    <FormControl className="mb-4" placeholder="Search tasks..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                </Col>
+                <Col>
+                    <InputGroup className="mb-4">
+                        <Button variant="primary" onClick={() => setShowTaskDialog(true)}>Create Task</Button>
 
-            <Row>
+                        {selectMode && selectedTasks.length > 0 && (
+                            <>
+                                <Button variant="success" onClick={() => updateSelectedTasks('portfolio')}>Use in Portfolio</Button>
+                                <Button variant="warning" onClick={() => updateSelectedTasks('archive')}>Archive</Button>
+                                <Button variant="danger" onClick={() => updateSelectedTasks('delete')}>Delete</Button>
+                            </>
+                        )}
+                        
+                        <Button variant="secondary" onClick={() => setSelectMode(!selectMode)}>
+                            {selectMode ? 'Cancel' : 'Select'}
+                        </Button>
+                    </InputGroup>
+                </Col>
+            </Row>
+
+            <Row className="app-tasks">
                 {filteredTasks.map(task => (
                     <Col sm={4} key={task.id} className="mb-3">
-                        <Card onClick={() => { setShowTaskDialog(true); setCurrentTask(task); }}>
+                        <Card onClick={() => { setShowTaskDialog(true); setCurrentTask(task); }} className="app-card">
                             <Card.Body>
                                 {/* Select checkbox for task */}
                                 {selectMode && (
@@ -175,7 +184,7 @@ function TaskList() {
 
 
                                 {/* Completion Status with Checkbox */}
-                                <div className="d-flex justify-content-between align-items-center">
+                                <div className="d-flex justify-content-between align-items-center position-absolute bottom-0">
                                     <Form.Check
                                         type="checkbox"
                                         label="Completed"

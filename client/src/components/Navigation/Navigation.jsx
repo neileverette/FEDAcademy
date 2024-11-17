@@ -6,7 +6,7 @@ import { ListGroup } from 'react-bootstrap';
 function Navigation() {
     return (
       <nav className="my-4">
-        <ListGroup horizontal>
+        <ListGroup horizontal className="app-nav">
           <ListGroup.Item as={Link} to="/tasks">Tasks</ListGroup.Item>
           <ListGroup.Item as={Link} to="/archive">Archive</ListGroup.Item>
           <ListGroup.Item as={Link} to="/portfolio">Portfolio</ListGroup.Item>

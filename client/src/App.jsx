@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Container } from 'react-bootstrap';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { Container, Nav } from 'react-bootstrap';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 
 import Header from './components/Header/Header';
 import Navigation from './components/Navigation/Navigation';
@@ -22,7 +22,7 @@ function App() {
 
   return (
     <Router>
-      <Container>
+      <Container className='app-container'>
         <Header theme={{current: theme, set: setTheme}} />
         <Navigation />
         <Routes>
@@ -30,6 +30,7 @@ function App() {
           <Route path="/archive" element={<Archive />} />
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/review" element={<Review />} />
+          <Route path="*" element={<Navigate to="/tasks" replace={true} />} />
         </Routes>
       </Container>
     </Router>
