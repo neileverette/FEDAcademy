@@ -1,38 +1,45 @@
 @import 'bootstrap/dist/css/bootstrap.min.css';
 
 .app-container {
-    max-width: 80rem;
-    text-align: center;
+  max-width: 80rem;
+  text-align: center;
 }
 
 .app-container h1 {
-    font-size: 5rem;
-    font-weight: 300;
-    line-height: 1.2;
+  font-size: 5rem;
+  font-weight: 300;
+  line-height: 1.2;
 }
 
 .app-menu {
-    position: fixed;
-    top: 8px;
-    right: 8px;
+  position: fixed;
+  top: 8px;
+  right: 8px;
 }
 
 .app-nav {
-    display: inline-flex;
+  display: inline-flex;
 }
 
 .app-container h2 {
-    font-size: 3.5rem;
+  font-size: 3.5rem;
 }
 
 .app-controls {
-    display: inline-flex;
+  display: inline-flex;
 }
 
 .app-tasks {
-    text-align: left;
+  text-align: left;
 }
 
 .app-card {
-    height: 12rem;
+  height: 12rem;
+}
+
+.card-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
