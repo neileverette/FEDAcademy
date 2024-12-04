@@ -1,0 +1,23 @@
+{
+  "name": "academy-app",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "run-p 'dev:*'",
+    "dev:server": "npm run --workspace server dev",
+    "dev:client": "npm run --workspace client dev"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "npm-run-all": "^4.1.5"
+  },
+  "dependencies": {
+    "bootstrap-icons": "^1.11.3"
+  },
+  "workspaces": [
+    "client",
+    "server"
+  ]
+}
