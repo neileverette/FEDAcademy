@@ -73,6 +73,9 @@ const defaultData = () => ({
     email: 'bob.along@flotsam.com',
   },
   tasks: [],
+  theme: {
+    theme: 'default',
+  },
 });
 let liveData; // Should probably use a map, but only a sample app.
 
@@ -131,11 +134,12 @@ const initData = () => {
 
   try {
     const fileContents = fs.readFileSync(dataFile, 'utf8');
-    liveData = JSON.parse(fileContents);
+    liveData = { ...defaultData(), ...JSON.parse(fileContents) };
   } catch {
     liveData = {
       profile: null,
       tasks: [],
+      theme: {},
     };
   }
 };
