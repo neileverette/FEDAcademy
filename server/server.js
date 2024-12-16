@@ -128,19 +128,20 @@ const initData = () => {
 
   // open file data.json and read contents
   if (options.gen) {
+    // gen data if instructed or no data exists
     genData();
     process.exit(0);
   }
 
   try {
+    if (!fs.existsSync(dataFile)) {
+      genData();
+    }
+    // should always now exist
     const fileContents = fs.readFileSync(dataFile, 'utf8');
     liveData = { ...defaultData(), ...JSON.parse(fileContents) };
   } catch {
-    liveData = {
-      profile: null,
-      tasks: [],
-      theme: {},
-    };
+    liveData = defaultData();
   }
 };
 

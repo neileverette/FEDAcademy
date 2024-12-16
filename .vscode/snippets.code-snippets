@@ -1,4 +1,17 @@
 {
+  "Block class BEM": {
+    "scope": "scss",
+    "prefix": "block-class",
+    "body": [
+      "$$block-class: \"${TM_FILENAME_BASE}\";",
+      "",
+      ".#{$$block-class} {",
+      "  // styles for $$block-class",
+      "  $1",
+      "}",
+      ""
+    ]
+  },
   "Sytlelint disable next line": {
     "scope": "scss",
     "prefix": "//",
@@ -8,11 +21,6 @@
     "scope": "scss",
     "prefix": "//la",
     "body": ["// stylelint-disable-next-line carbon/layout-token-use"]
-  },
-  "Sytlelint disable next line Carbon Motion Duration": {
-    "scope": "scss",
-    "prefix": "//mo",
-    "body": ["// stylelint-disable-next-line carbon/motion-duration-use"]
   },
   "Sytlelint disable next line Carbon Motion Duration": {
     "scope": "scss",
