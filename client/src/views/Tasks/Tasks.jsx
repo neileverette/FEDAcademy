@@ -1,184 +1,151 @@
-import React, { useState, useEffect } from 'react';
-import { Row, Col, Button, Modal, Form, Toast, ToastContainer, InputGroup, FormControl } from 'react-bootstrap';
-import axios from 'axios';
-import AppCard from '../../components/AppCard'; // Import the generic AppCard component
+import React, { useState } from 'react';
+import { Modal, Form, Button, Toast, ToastContainer } from 'react-bootstrap';
 import TaskList from '../../components/TaskList';
+import { useAppContext } from '../../components/AppContext';
 
-// Task List Component with Select Mode
 function Tasks() {
-    const [tasks, setTasks] = useState([]);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedTasks, setSelectedTasks] = useState([]);
-    const [selectMode, setSelectMode] = useState(false);
     const [showTaskDialog, setShowTaskDialog] = useState(false);
     const [currentTask, setCurrentTask] = useState(null);
-    // Add the notification state
-    const [notification, setNotification] = useState({ message: '', type: '', show: false });
 
-    const refreshTasks = () =>
-        axios.get('http://localhost:8080/api/tasks')
-            .then(response => setTasks(response.data.filter(task => !task.archive)))
-            .catch(error => showNotification('Failed to load tasks.'), 'error');
+    // Get data and functions from context
+    const { 
+        tasks, 
+        notification, 
+        updateTask, 
+        toggleTaskCompletion, 
+        batchUpdateTasks, 
+        deleteTasks, 
+        showNotification 
+    } = useAppContext();
 
-    useEffect(() => {
-        refreshTasks();
-    }, []);
-
-    // Handle task selection/deselection
-    const toggleSelectTask = (taskId) => {
-        setSelectedTasks(prevSelectedTasks =>
-            prevSelectedTasks.includes(taskId)
-                ? prevSelectedTasks.filter(id => id !== taskId)
-                : [...prevSelectedTasks, taskId]
-        );
-    };
-
-    const toggleTaskCompletion = (task, done) => {
-        task.done = done;
-        task.doneDate = { type: 'date', value: (new Date()).toISOString() };
-        axios.put(`http://localhost:8080/api/tasks/task`, task)
-            .then(response => showNotification(`Task marked as ${done ? '' : 'un'}completed!`, 'success'))
-            .catch(error => showNotification('Failed to mark task as completed.', 'error'))
-            .finally(() => refreshTasks());
-    };
-
-    const handleTaskSubmit = (task) => {
-        if (task.id) {
-            axios.put(`http://localhost:8080/api/tasks/task`, task)
-                .then(response => showNotification('Task Updated Successfully!', 'success'))
-                .catch(error => showNotification('Failed to update task.', 'error'))
-                .finally(() => refreshTasks());
-        } else {
-            axios.post('http://localhost:8080/api/tasks/new', task)
-                .then(response => showNotification('Task Created Successfully!', 'success'))
-                .catch(error => showNotification('Failed to create task.', 'error'))
-                .finally(() => refreshTasks());
-        }
-        setShowTaskDialog(false);
-        setCurrentTask(null);
-    };
-
-    // Handle task updates (Use in Portfolio, Archive, Delete)
-    const updateSelectedTasks = (action) => {
-        if (selectedTasks.length === 0) return;
-
-        // Prepare the payload based on the action
-        const updateData = selectedTasks.map(taskId => {
-            const task = tasks.find(t => t.id === taskId);
-            if (!task) return null;
-
-            switch (action) {
-                case 'portfolio':
-                    return { ...task, portfolio: true }; // Mark as portfolio
-                case 'archive':
-                    return { ...task, archive: true }; // Mark as done (archived)
-                case 'delete':
-                    return { id: taskId }; // Only the id for deletion
-                default:
-                    return null;
-            }
-        }).filter(task => task !== null);
-
-        // Send updated tasks to backend
-        if (action === 'delete') {
-            // For delete, send a delete request
-            Promise.all(updateData.map(task => axios.delete(`http://localhost:8080/api/tasks`, task)))
-                .then(() => {
-                    showNotification('Selected tasks deleted!', 'success');
-                    setSelectMode(false);
-                    setSelectedTasks([]);
-                    setTasks(prevTasks => prevTasks.filter(task => !selectedTasks.includes(task.id)));
-                })
-                .catch(error => showNotification('Failed to delete tasks.', 'error'))
-                .finally(() => refreshTasks());
-        } else {
-            // For other actions (portfolio, archive), send an update request
-            Promise.all(updateData.map(task =>
-                axios.put(`http://localhost:8080/api/tasks/task`, task)
-            ))
-                .then(() => {
-                    showNotification(`Selected tasks ${action === 'portfolio' ? 'added to portfolio' : 'archived'}`, 'success');
-                    setSelectMode(false);
-                    setSelectedTasks([]);
-                    setTasks(prevTasks => prevTasks.map(task =>
-                        selectedTasks.includes(task.id)
-                            ? { ...task, ...updateData.find(updatedTask => updatedTask.id === task.id) }
-                            : task
-                    ));
-                })
-                .catch(error => showNotification(`Failed to update tasks for action: ${action}`, 'error'))
-                .finally(() => refreshTasks());
-        }
-    };
-
-    // Handle success and failure notification
-    const showNotification = (message, type = 'success') => {
-        setNotification({ message, type, show: true });
-        setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 3000); // Hide toast after 3 seconds
-    };
-
-    // Handler functions for AppCard
     const handleTaskClick = (task) => {
         setShowTaskDialog(true);
         setCurrentTask(task);
     };
 
-    const filteredTasks = tasks.filter(task => task.title.toLowerCase().includes(searchQuery.toLowerCase()));
+    const handleCreateTask = () => {
+        setShowTaskDialog(true);
+        setCurrentTask(null);
+    };
+
+    const handleTaskSubmit = async (task) => {
+        await updateTask(task);
+        setShowTaskDialog(false);
+        setCurrentTask(null);
+    };
+
+    // Define actions specific to Tasks view
+    const taskActions = [
+        {
+            label: "Use in Portfolio",
+            variant: "success",
+            handler: async (selectedTaskIds) => {
+                const success = await batchUpdateTasks(selectedTaskIds, { portfolio: true });
+                if (success) {
+                    showNotification('Tasks added to portfolio!', 'success');
+                }
+            }
+        },
+        {
+            label: "Archive", 
+            variant: "warning",
+            handler: async (selectedTaskIds) => {
+                const success = await batchUpdateTasks(selectedTaskIds, { archive: true });
+                if (success) {
+                    showNotification('Tasks archived!', 'success');
+                }
+            }
+        },
+        {
+            label: "Delete",
+            variant: "danger", 
+            handler: async (selectedTaskIds) => {
+                if (window.confirm('Are you sure you want to delete these tasks?')) {
+                    const success = await deleteTasks(selectedTaskIds);
+                    if (success) {
+                        showNotification('Tasks deleted!', 'success');
+                    }
+                }
+            }
+        }
+    ];
 
     return (
-
-        <div>            
+        <div>
             <ToastContainer position="top-end" className="p-3">
                 {notification.show && (
-                    <Toast bg={notification.type === 'success' ? 'success' : 'danger'} onClose={() => setNotification({ ...notification, show: false })} delay={3000} autohide>
+                    <Toast 
+                        bg={notification.type === 'success' ? 'success' : 'danger'} 
+                        onClose={() => showNotification('', 'success', false)} 
+                        delay={3000} 
+                        autohide
+                    >
                         <Toast.Body>{notification.message}</Toast.Body>
                     </Toast>
                 )}
             </ToastContainer>
 
             <TaskList 
-                tasks={filteredTasks}
-                onTaskUpdate={refreshTasks}
+                tasks={tasks}
+                onTaskUpdate={toggleTaskCompletion}
+                actions={taskActions}
+                onTaskClick={handleTaskClick}
+                showCreateButton={true}
+                onCreateTask={handleCreateTask}
             />
+
+            {/* Task Modal */}
             <Modal show={showTaskDialog} onHide={() => setShowTaskDialog(false)}>
                 <Modal.Header closeButton>
                     <Modal.Title>{currentTask ? 'Edit Task' : 'Create Task'}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <Form>
-                        <Form.Group controlId="taskTitle">
+                        <Form.Group controlId="taskTitle" className="mb-3">
                             <Form.Label>Title</Form.Label>
-                            <Form.Control type="text" defaultValue={currentTask ? currentTask.title : ''} />
+                            <Form.Control 
+                                type="text" 
+                                defaultValue={currentTask ? currentTask.title : ''} 
+                            />
                         </Form.Group>
-                        <Form.Group controlId="taskDescription">
+                        <Form.Group controlId="taskDescription" className="mb-3">
                             <Form.Label>Description</Form.Label>
-                            <Form.Control as="textarea" defaultValue={currentTask ? currentTask.description : ''} />
+                            <Form.Control 
+                                as="textarea" 
+                                defaultValue={currentTask ? currentTask.description : ''} 
+                            />
                         </Form.Group>
-                        <Form.Group controlId="taskDueDate">
+                        <Form.Group controlId="taskDueDate" className="mb-3">
                             <Form.Label>Due Date</Form.Label>
-                            <Form.Control type="date" defaultValue={currentTask ? currentTask.dueDate : ''} />
+                            <Form.Control 
+                                type="date" 
+                                defaultValue={currentTask ? currentTask.dueDate : ''} 
+                            />
                         </Form.Group>
-                        <Form.Group controlId="taskNotes">
+                        <Form.Group controlId="taskNotes" className="mb-3">
                             <Form.Label>Notes</Form.Label>
-                            <Form.Control as="textarea" defaultValue={currentTask ? currentTask.notes : ''} />
-                        </Form.Group>
-                        <Form.Group controlId="taskImage">
-                            <Form.Label>Image</Form.Label>
-                            <Form.Control type="file" />
+                            <Form.Control 
+                                as="textarea" 
+                                defaultValue={currentTask ? currentTask.notes : ''} 
+                            />
                         </Form.Group>
                     </Form>
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowTaskDialog(false)}>Cancel</Button>
-                    <Button variant="primary" onClick={() => handleTaskSubmit({
-                        ...currentTask,
-                        id: currentTask ? currentTask.id : null,
-                        title: document.getElementById('taskTitle').value,
-                        description: document.getElementById('taskDescription').value,
-                        dueDate: document.getElementById('taskDueDate').value,
-                        notes: document.getElementById('taskNotes').value,
-                        // Note: You can handle file upload logic here if needed
-                    })}>
+                    <Button variant="secondary" onClick={() => setShowTaskDialog(false)}>
+                        Cancel
+                    </Button>
+                    <Button 
+                        variant="primary" 
+                        onClick={() => handleTaskSubmit({
+                            ...currentTask,
+                            id: currentTask ? currentTask.id : null,
+                            title: document.getElementById('taskTitle').value,
+                            description: document.getElementById('taskDescription').value,
+                            dueDate: document.getElementById('taskDueDate').value,
+                            notes: document.getElementById('taskNotes').value,
+                        })}
+                    >
                         {currentTask ? 'Save Changes' : 'Create Task'}
                     </Button>
                 </Modal.Footer>

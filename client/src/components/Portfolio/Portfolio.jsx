@@ -1,189 +1,108 @@
-import React, { useState, useEffect } from 'react';
-import { Row, Col, Button, Modal, Form, Toast, ToastContainer, InputGroup, FormControl } from 'react-bootstrap';
-import axios from 'axios';
-import AppCard from '../AppCard'; // ADDED: Import the shared AppCard component
+import React, { useState } from 'react';
+import { Modal, Form, Button, Toast, ToastContainer } from 'react-bootstrap';
+import TaskList from '../TaskList'; // Adjust path based on your file structure
+import { useAppContext } from '../AppContext';
 
 function Portfolio() {
-    const [tasks, setTasks] = useState([]);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedTasks, setSelectedTasks] = useState([]);
-    const [selectMode, setSelectMode] = useState(false);
     const [showTaskDialog, setShowTaskDialog] = useState(false);
     const [currentTask, setCurrentTask] = useState(null);
-    const [notification, setNotification] = useState({ message: '', type: '', show: false });
 
-    const refreshTasks = () =>
-        axios.get('http://localhost:8080/api/tasks')
-            .then(response => setTasks(response.data.filter(task => task.portfolio))) // CHANGED: Filter for portfolio tasks
-            .catch(error => showNotification('Failed to load portfolio tasks.', 'error'));
-
-    useEffect(() => {
-        refreshTasks();
-    }, []);
-
-    const toggleSelectTask = (taskId) => {
-        setSelectedTasks(prevSelectedTasks =>
-            prevSelectedTasks.includes(taskId)
-                ? prevSelectedTasks.filter(id => id !== taskId)
-                : [...prevSelectedTasks, taskId]
-        );
-    };
-
-    const toggleTaskCompletion = (task, done) => {
-        task.done = done;
-        task.doneDate = { type: 'date', value: (new Date()).toISOString() };
-        axios.put(`http://localhost:8080/api/tasks/task`, task)
-            .then(response => showNotification(`Task marked as ${done ? '' : 'un'}completed!`, 'success'))
-            .catch(error => showNotification('Failed to mark task as completed.', 'error'))
-            .finally(() => refreshTasks());
-    };
-
-    // CHANGED: Portfolio-specific actions
-    const updateSelectedTasks = (action) => {
-        if (selectedTasks.length === 0) return;
-
-        const updateData = selectedTasks.map(taskId => {
-            const task = tasks.find(t => t.id === taskId);
-            if (!task) return null;
-
-            switch (action) {
-                case 'remove':
-                    return { ...task, portfolio: false }; // Remove from portfolio
-                case 'archive':
-                    return { ...task, archive: true }; // Archive task
-                default:
-                    return null;
-            }
-        }).filter(task => task !== null);
-
-        Promise.all(updateData.map(task =>
-            axios.put(`http://localhost:8080/api/tasks/task`, task)
-        ))
-            .then(() => {
-                const actionText = action === 'remove' ? 'removed from portfolio' : 'archived';
-                showNotification(`Selected tasks ${actionText}!`, 'success');
-                setSelectMode(false);
-                setSelectedTasks([]);
-            })
-            .catch(error => showNotification(`Failed to ${action} tasks.`, 'error'))
-            .finally(() => refreshTasks());
-    };
-
-    const showNotification = (message, type = 'success') => {
-        setNotification({ message, type, show: true });
-        setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 3000);
-    };
+    // Get data and functions from context
+    const { 
+        portfolioTasks, 
+        notification, 
+        batchUpdateTasks, 
+        showNotification 
+    } = useAppContext();
 
     const handleTaskClick = (task) => {
         setShowTaskDialog(true);
         setCurrentTask(task);
     };
 
-    const handleTaskSubmit = (task) => {
-        if (task.id) {
-            axios.put(`http://localhost:8080/api/tasks/task`, task)
-                .then(response => showNotification('Task Updated Successfully!', 'success'))
-                .catch(error => showNotification('Failed to update task.', 'error'))
-                .finally(() => refreshTasks());
+    // Define actions specific to Portfolio view
+    const portfolioActions = [
+        {
+            label: "Remove from Portfolio",
+            variant: "warning",
+            handler: async (selectedTaskIds) => {
+                const success = await batchUpdateTasks(selectedTaskIds, { portfolio: false });
+                if (success) {
+                    showNotification('Tasks removed from portfolio!', 'success');
+                }
+            }
         }
-        setShowTaskDialog(false);
-        setCurrentTask(null);
-    };
-
-    const filteredTasks = tasks.filter(task => task.title.toLowerCase().includes(searchQuery.toLowerCase()));
+    ];
 
     return (
         <div>
             <ToastContainer position="top-end" className="p-3">
                 {notification.show && (
-                    <Toast bg={notification.type === 'success' ? 'success' : 'danger'} onClose={() => setNotification({ ...notification, show: false })} delay={3000} autohide>
+                    <Toast 
+                        bg={notification.type === 'success' ? 'success' : 'danger'} 
+                        onClose={() => showNotification('', 'success', false)} 
+                        delay={3000} 
+                        autohide
+                    >
                         <Toast.Body>{notification.message}</Toast.Body>
                     </Toast>
                 )}
             </ToastContainer>
 
-            <h2>Portfolio</h2>
-            <p>Achievements you want to highlight.</p>
+            <TaskList 
+                tasks={portfolioTasks}
+                onTaskUpdate={null} // No completion toggle for portfolio tasks
+                title="Portfolio"
+                subtitle="Achievements you want to highlight."
+                actions={portfolioActions}
+                onTaskClick={handleTaskClick}
+                showCreateButton={false} // No create button in portfolio
+            />
 
-            <Row className="app-controls">
-                <Col className="col-auto">
-                    <FormControl className="mb-4" placeholder="Search portfolio tasks..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-                </Col>
-                <Col>
-                    <InputGroup className="mb-4">
-                        {selectMode && selectedTasks.length > 0 && (
-                            <>
-                                <Button variant="warning" onClick={() => updateSelectedTasks('remove')}>Remove from Portfolio</Button>
-                                <Button variant="secondary" onClick={() => updateSelectedTasks('archive')}>Archive</Button>
-                            </>
-                        )}
-                        
-                        <Button variant="secondary" onClick={() => setSelectMode(!selectMode)}>
-                            {selectMode ? 'Cancel' : 'Select'}
-                        </Button>
-                    </InputGroup>
-                </Col>
-            </Row>
-
-            <Row className="app-tasks">
-                {filteredTasks.map(task => (
-                    <Col sm={4} key={task.id} className="mb-3">
-                        {/* REPLACED: Card component with AppCard */}
-                        <AppCard
-                            task={task}
-                            selectMode={selectMode}
-                            selectedTasks={selectedTasks}
-                            showSelectCheckbox={true}
-                            showCompletionCheckbox={true}
-                            showPortfolioStar={false}
-                            onCardClick={handleTaskClick}
-                            onSelectToggle={toggleSelectTask}
-                            onCompletionToggle={toggleTaskCompletion}
-                        />
-                    </Col>
-                ))}
-            </Row>
-
-            {/* Task Modal for editing portfolio tasks */}
+            {/* Read-only Task Modal for portfolio tasks */}
             <Modal show={showTaskDialog} onHide={() => setShowTaskDialog(false)}>
                 <Modal.Header closeButton>
-                    <Modal.Title>Edit Portfolio Task</Modal.Title>
+                    <Modal.Title>View Portfolio Task</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <Form>
-                        <Form.Group controlId="taskTitle">
+                        <Form.Group controlId="taskTitle" className="mb-3">
                             <Form.Label>Title</Form.Label>
-                            <Form.Control type="text" defaultValue={currentTask ? currentTask.title : ''} />
+                            <Form.Control 
+                                type="text" 
+                                value={currentTask ? currentTask.title : ''} 
+                                readOnly 
+                            />
                         </Form.Group>
-                        <Form.Group controlId="taskDescription">
+                        <Form.Group controlId="taskDescription" className="mb-3">
                             <Form.Label>Description</Form.Label>
-                            <Form.Control as="textarea" defaultValue={currentTask ? currentTask.description : ''} />
+                            <Form.Control 
+                                as="textarea" 
+                                value={currentTask ? currentTask.description : ''} 
+                                readOnly 
+                            />
                         </Form.Group>
-                        <Form.Group controlId="taskDueDate">
+                        <Form.Group controlId="taskDueDate" className="mb-3">
                             <Form.Label>Due Date</Form.Label>
-                            <Form.Control type="date" defaultValue={currentTask ? currentTask.dueDate : ''} />
+                            <Form.Control 
+                                type="date" 
+                                value={currentTask ? currentTask.dueDate : ''} 
+                                readOnly 
+                            />
                         </Form.Group>
-                        <Form.Group controlId="taskNotes">
+                        <Form.Group controlId="taskNotes" className="mb-3">
                             <Form.Label>Notes</Form.Label>
-                            <Form.Control as="textarea" defaultValue={currentTask ? currentTask.notes : ''} />
-                        </Form.Group>
-                        <Form.Group controlId="taskImage">
-                            <Form.Label>Image</Form.Label>
-                            <Form.Control type="file" />
+                            <Form.Control 
+                                as="textarea" 
+                                value={currentTask ? currentTask.notes : ''} 
+                                readOnly 
+                            />
                         </Form.Group>
                     </Form>
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowTaskDialog(false)}>Cancel</Button>
-                    <Button variant="primary" onClick={() => handleTaskSubmit({
-                        ...currentTask,
-                        id: currentTask ? currentTask.id : null,
-                        title: document.getElementById('taskTitle').value,
-                        description: document.getElementById('taskDescription').value,
-                        dueDate: document.getElementById('taskDueDate').value,
-                        notes: document.getElementById('taskNotes').value,
-                    })}>
-                        Save Changes
+                    <Button variant="secondary" onClick={() => setShowTaskDialog(false)}>
+                        Close
                     </Button>
                 </Modal.Footer>
             </Modal>

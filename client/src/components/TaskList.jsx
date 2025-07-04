@@ -4,7 +4,15 @@ import axios from 'axios';
 import AppCard from './AppCard'; // Import the generic AppCard component
 
 // Task List Component with Select Mode
-function TaskList({ tasks, onTaskUpdate }) {
+function TaskList({ 
+    tasks, 
+    onTaskUpdate,  
+    title = 'Tasks',
+    subtitle = 'Live tasks that you are still engaged with.',
+    showCreateButton = true,
+    onCreateTask = null,
+    actions = []
+}) {
 //    const [tasks, setTasks] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedTasks, setSelectedTasks] = useState([]);
@@ -134,8 +142,8 @@ function TaskList({ tasks, onTaskUpdate }) {
                 )}
             </ToastContainer>
 
-            <h2>Tasks</h2>
-            <p>Live tasks that you are still engaged with.</p>
+            <h2>{title}</h2>
+            <p>{subtitle}</p>
 
             <Row className="app-controls">
                 <Col className="col-auto">
@@ -143,16 +151,24 @@ function TaskList({ tasks, onTaskUpdate }) {
                 </Col>
                 <Col>
                     <InputGroup className="mb-4">
-                        <Button variant="primary" onClick={() => setShowTaskDialog(true)}>Create Task</Button>
+                        {showCreateButton && (
+                        <Button variant="primary" onClick={onCreateTask || (() => setShowTaskDialog(true))}>Create Task</Button>
+                    )}
 
-                        {selectMode && selectedTasks.length > 0 && (
-                            <>
-                                <Button variant="success" onClick={() => updateSelectedTasks('portfolio')}>Use in Portfolio</Button>
-                                <Button variant="warning" onClick={() => updateSelectedTasks('archive')}>Archive</Button>
-                                <Button variant="danger" onClick={() => updateSelectedTasks('delete')}>Delete</Button>
-                            </>
-                        )}
-                        
+                        {selectMode && selectedTasks.length > 0 && actions.length > 0 && (
+    <>
+                            {actions.map((action, index) => (
+                                <Button 
+                                    key={index}
+                                    variant={action.variant || "primary"} 
+                                    onClick={() => action.handler(selectedTasks)}
+                                >
+                                    {action.label}
+                                </Button>
+                            ))}
+                        </>
+                    )}
+                                            
                         <Button variant="secondary" onClick={() => setSelectMode(!selectMode)}>
                             {selectMode ? 'Cancel' : 'Select'}
                         </Button>

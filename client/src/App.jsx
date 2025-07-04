@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Container, Nav } from 'react-bootstrap';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { AppProvider } from './components/AppContext';
 
 import Header from './components/Header/Header';
 import Navigation from './components/Navigation/Navigation';
@@ -21,19 +22,21 @@ function App() {
   }, [theme]);
 
   return (
-    <Router>
-      <Container className='app-container'>
-        <Header theme={{current: theme, set: setTheme}} />
-        <Navigation />
-        <Routes>
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/archive" element={<Archive />} />
-          <Route path="/portfolio" element={<Portfolio />} />
-          <Route path="/review" element={<Review />} />
-          <Route path="*" element={<Navigate to="/tasks" replace={true} />} />
-        </Routes>
-      </Container>
-    </Router>
+    <AppProvider>
+      <Router>
+        <Container className='app-container'>
+          <Header theme={{current: theme, set: setTheme}} />
+          <Navigation />
+          <Routes>
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/archive" element={<Archive />} />
+            <Route path="/portfolio" element={<Portfolio />} />
+            <Route path="/review" element={<Review />} />
+            <Route path="*" element={<Navigate to="/tasks" replace={true} />} />
+          </Routes>
+        </Container>
+      </Router>
+    </AppProvider>
   );
 }
 
