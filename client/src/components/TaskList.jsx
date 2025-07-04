@@ -1,26 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Button, Modal, Form, Toast, ToastContainer, InputGroup, FormControl } from 'react-bootstrap';
 import axios from 'axios';
-import AppCard from '../AppCard'; // ADDED: Import the shared AppCard component
+import AppCard from './AppCard'; // Import the generic AppCard component
 
-function Portfolio() {
-    const [tasks, setTasks] = useState([]);
+// Task List Component with Select Mode
+function TaskList({ tasks, onTaskUpdate }) {
+//    const [tasks, setTasks] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedTasks, setSelectedTasks] = useState([]);
     const [selectMode, setSelectMode] = useState(false);
     const [showTaskDialog, setShowTaskDialog] = useState(false);
     const [currentTask, setCurrentTask] = useState(null);
+    // Add the notification state
     const [notification, setNotification] = useState({ message: '', type: '', show: false });
 
     const refreshTasks = () =>
         axios.get('http://localhost:8080/api/tasks')
-            .then(response => setTasks(response.data.filter(task => task.portfolio))) // CHANGED: Filter for portfolio tasks
-            .catch(error => showNotification('Failed to load portfolio tasks.', 'error'));
+            .then(response => setTasks(response.data.filter(task => !task.archive)))
+            .catch(error => showNotification('Failed to load tasks.'), 'error');
 
-    useEffect(() => {
+ /*   useEffect(() => {
         refreshTasks();
-    }, []);
+    }, []); */
 
+    // Handle task selection/deselection
     const toggleSelectTask = (taskId) => {
         setSelectedTasks(prevSelectedTasks =>
             prevSelectedTasks.includes(taskId)
@@ -38,56 +41,85 @@ function Portfolio() {
             .finally(() => refreshTasks());
     };
 
-    // CHANGED: Portfolio-specific actions
-    const updateSelectedTasks = (action) => {
-        if (selectedTasks.length === 0) return;
-
-        const updateData = selectedTasks.map(taskId => {
-            const task = tasks.find(t => t.id === taskId);
-            if (!task) return null;
-
-            switch (action) {
-                case 'remove':
-                    return { ...task, portfolio: false }; // Remove from portfolio
-                case 'archive':
-                    return { ...task, archive: true }; // Archive task
-                default:
-                    return null;
-            }
-        }).filter(task => task !== null);
-
-        Promise.all(updateData.map(task =>
-            axios.put(`http://localhost:8080/api/tasks/task`, task)
-        ))
-            .then(() => {
-                const actionText = action === 'remove' ? 'removed from portfolio' : 'archived';
-                showNotification(`Selected tasks ${actionText}!`, 'success');
-                setSelectMode(false);
-                setSelectedTasks([]);
-            })
-            .catch(error => showNotification(`Failed to ${action} tasks.`, 'error'))
-            .finally(() => refreshTasks());
-    };
-
-    const showNotification = (message, type = 'success') => {
-        setNotification({ message, type, show: true });
-        setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 3000);
-    };
-
-    const handleTaskClick = (task) => {
-        setShowTaskDialog(true);
-        setCurrentTask(task);
-    };
-
     const handleTaskSubmit = (task) => {
         if (task.id) {
             axios.put(`http://localhost:8080/api/tasks/task`, task)
                 .then(response => showNotification('Task Updated Successfully!', 'success'))
                 .catch(error => showNotification('Failed to update task.', 'error'))
                 .finally(() => refreshTasks());
+        } else {
+            axios.post('http://localhost:8080/api/tasks/new', task)
+                .then(response => showNotification('Task Created Successfully!', 'success'))
+                .catch(error => showNotification('Failed to create task.', 'error'))
+                .finally(() => refreshTasks());
         }
         setShowTaskDialog(false);
         setCurrentTask(null);
+    };
+
+    // Handle task updates (Use in Portfolio, Archive, Delete)
+    const updateSelectedTasks = (action) => {
+        if (selectedTasks.length === 0) return;
+
+        // Prepare the payload based on the action
+        const updateData = selectedTasks.map(taskId => {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return null;
+
+            switch (action) {
+                case 'portfolio':
+                    return { ...task, portfolio: true }; // Mark as portfolio
+                case 'archive':
+                    return { ...task, archive: true }; // Mark as done (archived)
+                case 'delete':
+                    return { id: taskId }; // Only the id for deletion
+                default:
+                    return null;
+            }
+        }).filter(task => task !== null);
+
+        // Send updated tasks to backend
+        if (action === 'delete') {
+            // For delete, send a delete request
+            Promise.all(updateData.map(task => axios.delete(`http://localhost:8080/api/tasks`, task)))
+                .then(() => {
+                    showNotification('Selected tasks deleted!', 'success');
+                    setSelectMode(false);
+                    setSelectedTasks([]);
+                    setTasks(prevTasks => prevTasks.filter(task => !selectedTasks.includes(task.id)));
+                })
+                .catch(error => showNotification('Failed to delete tasks.', 'error'))
+                .finally(() => refreshTasks());
+        } else {
+            // For other actions (portfolio, archive), send an update request
+            Promise.all(updateData.map(task =>
+                axios.put(`http://localhost:8080/api/tasks/task`, task)
+            ))
+                .then(() => {
+                    showNotification(`Selected tasks ${action === 'portfolio' ? 'added to portfolio' : 'archived'}`, 'success');
+                    setSelectMode(false);
+                    setSelectedTasks([]);
+                    setTasks(prevTasks => prevTasks.map(task =>
+                        selectedTasks.includes(task.id)
+                            ? { ...task, ...updateData.find(updatedTask => updatedTask.id === task.id) }
+                            : task
+                    ));
+                })
+                .catch(error => showNotification(`Failed to update tasks for action: ${action}`, 'error'))
+                .finally(() => refreshTasks());
+        }
+    };
+
+    // Handle success and failure notification
+    const showNotification = (message, type = 'success') => {
+        setNotification({ message, type, show: true });
+        setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 3000); // Hide toast after 3 seconds
+    };
+
+    // Handler functions for AppCard
+    const handleTaskClick = (task) => {
+        setShowTaskDialog(true);
+        setCurrentTask(task);
     };
 
     const filteredTasks = tasks.filter(task => task.title.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -102,19 +134,22 @@ function Portfolio() {
                 )}
             </ToastContainer>
 
-            <h2>Portfolio</h2>
-            <p>Achievements you want to highlight.</p>
+            <h2>Tasks</h2>
+            <p>Live tasks that you are still engaged with.</p>
 
             <Row className="app-controls">
                 <Col className="col-auto">
-                    <FormControl className="mb-4" placeholder="Search portfolio tasks..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                    <FormControl className="mb-4" placeholder="Search tasks..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                 </Col>
                 <Col>
                     <InputGroup className="mb-4">
+                        <Button variant="primary" onClick={() => setShowTaskDialog(true)}>Create Task</Button>
+
                         {selectMode && selectedTasks.length > 0 && (
                             <>
-                                <Button variant="warning" onClick={() => updateSelectedTasks('remove')}>Remove from Portfolio</Button>
-                                <Button variant="secondary" onClick={() => updateSelectedTasks('archive')}>Archive</Button>
+                                <Button variant="success" onClick={() => updateSelectedTasks('portfolio')}>Use in Portfolio</Button>
+                                <Button variant="warning" onClick={() => updateSelectedTasks('archive')}>Archive</Button>
+                                <Button variant="danger" onClick={() => updateSelectedTasks('delete')}>Delete</Button>
                             </>
                         )}
                         
@@ -128,14 +163,13 @@ function Portfolio() {
             <Row className="app-tasks">
                 {filteredTasks.map(task => (
                     <Col sm={4} key={task.id} className="mb-3">
-                        {/* REPLACED: Card component with AppCard */}
                         <AppCard
                             task={task}
                             selectMode={selectMode}
                             selectedTasks={selectedTasks}
                             showSelectCheckbox={true}
                             showCompletionCheckbox={true}
-                            showPortfolioStar={false}
+                            showPortfolioStar={true}
                             onCardClick={handleTaskClick}
                             onSelectToggle={toggleSelectTask}
                             onCompletionToggle={toggleTaskCompletion}
@@ -144,10 +178,10 @@ function Portfolio() {
                 ))}
             </Row>
 
-            {/* Task Modal for editing portfolio tasks */}
+            {/* Task Modal */}
             <Modal show={showTaskDialog} onHide={() => setShowTaskDialog(false)}>
                 <Modal.Header closeButton>
-                    <Modal.Title>Edit Portfolio Task</Modal.Title>
+                    <Modal.Title>{currentTask ? 'Edit Task' : 'Create Task'}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <Form>
@@ -182,8 +216,9 @@ function Portfolio() {
                         description: document.getElementById('taskDescription').value,
                         dueDate: document.getElementById('taskDueDate').value,
                         notes: document.getElementById('taskNotes').value,
+                        // Note: You can handle file upload logic here if needed
                     })}>
-                        Save Changes
+                        {currentTask ? 'Save Changes' : 'Create Task'}
                     </Button>
                 </Modal.Footer>
             </Modal>
@@ -191,4 +226,4 @@ function Portfolio() {
     );
 }
 
-export default Portfolio;
+export default TaskList;

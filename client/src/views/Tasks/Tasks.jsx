@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Button, Modal, Form, Card, Toast, ToastContainer, InputGroup, FormControl } from 'react-bootstrap';
+import { Row, Col, Button, Modal, Form, Toast, ToastContainer, InputGroup, FormControl } from 'react-bootstrap';
 import axios from 'axios';
+import AppCard from '../../components/AppCard'; // Import the generic AppCard component
+import TaskList from '../../components/TaskList';
 
 // Task List Component with Select Mode
-function TaskList() {
+function Tasks() {
     const [tasks, setTasks] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedTasks, setSelectedTasks] = useState([]);
@@ -115,10 +117,17 @@ function TaskList() {
         setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 3000); // Hide toast after 3 seconds
     };
 
+    // Handler functions for AppCard
+    const handleTaskClick = (task) => {
+        setShowTaskDialog(true);
+        setCurrentTask(task);
+    };
+
     const filteredTasks = tasks.filter(task => task.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
     return (
-        <div>
+
+        <div>            
             <ToastContainer position="top-end" className="p-3">
                 {notification.show && (
                     <Toast bg={notification.type === 'success' ? 'success' : 'danger'} onClose={() => setNotification({ ...notification, show: false })} delay={3000} autohide>
@@ -127,79 +136,10 @@ function TaskList() {
                 )}
             </ToastContainer>
 
-            <h2>Tasks</h2>
-            <p>Live tasks that you are still engaged with.</p>
-
-            <Row className="app-controls">
-                <Col className="col-auto">
-                    <FormControl className="mb-4" placeholder="Search tasks..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-                </Col>
-                <Col>
-                    <InputGroup className="mb-4">
-                        <Button variant="primary" onClick={() => setShowTaskDialog(true)}>Create Task</Button>
-
-                        {selectMode && selectedTasks.length > 0 && (
-                            <>
-                                <Button variant="success" onClick={() => updateSelectedTasks('portfolio')}>Use in Portfolio</Button>
-                                <Button variant="warning" onClick={() => updateSelectedTasks('archive')}>Archive</Button>
-                                <Button variant="danger" onClick={() => updateSelectedTasks('delete')}>Delete</Button>
-                            </>
-                        )}
-                        
-                        <Button variant="secondary" onClick={() => setSelectMode(!selectMode)}>
-                            {selectMode ? 'Cancel' : 'Select'}
-                        </Button>
-                    </InputGroup>
-                </Col>
-            </Row>
-
-            <Row className="app-tasks">
-                {filteredTasks.map(task => (
-                    <Col sm={4} key={task.id} className="mb-3">
-                        <Card onClick={() => { setShowTaskDialog(true); setCurrentTask(task); }} className="app-card">
-                            <Card.Body>
-                                {/* Select checkbox for task */}
-                                {selectMode && (
-                                    <Form.Check
-                                        type="checkbox"
-                                        checked={selectedTasks.includes(task.id)}
-                                        onClick={e => { e.stopPropagation(); }}
-                                        onChange={() => toggleSelectTask(task.id)}
-                                        className="position-absolute top-0 end-0 m-2"
-                                    />
-                                )}
-
-                                {/* Task Title */}
-                                <Card.Title>
-                                    {task.title}
-
-                                    {/* Portfolio Star */}
-                                    {task.portfolio && (
-                                        <div className="position-absolute bottom-0 end-0 m-2">★</div>
-                                    )}
-                                </Card.Title>
-
-                                {/* Task Description */}
-                                <Card.Text>{task.description}</Card.Text>
-
-
-                                {/* Completion Status with Checkbox */}
-                                <div className="d-flex justify-content-between align-items-center position-absolute bottom-0">
-                                    <Form.Check
-                                        type="checkbox"
-                                        label="Completed"
-                                        checked={task.done}
-                                        onClick={e => { e.stopPropagation(); }}
-                                        onChange={(event) => toggleTaskCompletion(task, event.target.checked)}
-                                    />
-                                </div>
-                            </Card.Body>
-                        </Card>
-                    </Col>
-                ))}
-            </Row>
-
-            {/* Task Modal */}
+            <TaskList 
+                tasks={filteredTasks}
+                onTaskUpdate={refreshTasks}
+            />
             <Modal show={showTaskDialog} onHide={() => setShowTaskDialog(false)}>
                 <Modal.Header closeButton>
                     <Modal.Title>{currentTask ? 'Edit Task' : 'Create Task'}</Modal.Title>
@@ -247,4 +187,4 @@ function TaskList() {
     );
 }
 
-export default TaskList;
+export default Tasks;
